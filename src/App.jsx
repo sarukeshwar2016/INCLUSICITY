@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import LoginPage from './components/LoginPage.jsx';
+import SignUpPage from './components/SignUpPage.jsx';
 import ResetPassword from './components/ResetPassword.jsx';
 import { supabase } from './supabaseClient';
 
@@ -8,7 +9,6 @@ function App() {
   const [user, setUser] = useState(null);
 
   useEffect(() => {
-    // Check for an active session
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
@@ -25,7 +25,6 @@ function App() {
 
     checkSession();
 
-    // Listen for auth state changes
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session) {
         const { data: userData, error } = await supabase
@@ -55,6 +54,7 @@ function App() {
           path="/"
           element={user ? <div>Welcome, {user.id} ({user.email})!</div> : <LoginPage />}
         />
+        <Route path="/signup" element={<SignUpPage />} />
         <Route path="/reset-password" element={<ResetPassword />} />
       </Routes>
     </Router>
