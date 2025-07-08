@@ -3,12 +3,17 @@ import { supabase } from '../supabaseClient';
 import Input from './ui/Input.jsx';
 import Button from './ui/Button.jsx';
 import { Lock } from 'lucide-react';
+import CryptoJS from 'crypto-js';
 
 const ResetPassword = () => {
   const [newPassword, setNewPassword] = useState('');
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  const hashPassword = (password) => {
+    return CryptoJS.SHA256(password).toString();
+  };
 
   const handleResetPassword = async (e) => {
     e.preventDefault();
@@ -17,18 +22,31 @@ const ResetPassword = () => {
     setMessage('');
 
     try {
-      const { error } = await supabase.auth.updateUser({
+      const { data: { user }, error: authError } = await supabase.auth.updateUser({
         password: newPassword,
       });
 
-      if (error) {
-        setError(error.message);
-      } else {
-        setMessage('Password updated successfully! Redirecting to login...');
-        setTimeout(() => {
-          window.location.href = '/';
-        }, 2000);
+      if (authError) {
+        setError(authError.message);
+        setIsLoading(false);
+        return;
       }
+
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ password: hashPassword(newPassword) })
+        .eq('email', user.email);
+
+      if (updateError) {
+        setError('Error updating user data');
+        setIsLoading(false);
+        return;
+      }
+
+      setMessage('Password updated successfully! Redirecting to login...');
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 2000);
     } catch (err) {
       setError('An unexpected error occurred');
     } finally {

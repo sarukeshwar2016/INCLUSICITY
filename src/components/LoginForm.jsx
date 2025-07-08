@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import Input from './ui/Input.jsx';
 import Button from './ui/Button.jsx';
-import { Eye, EyeOff, Mail, Lock, Twitter } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
 import { supabase } from '../supabaseClient';
+import CryptoJS from 'crypto-js';
 
 const LoginForm = ({ onLogin }) => {
   const [email, setEmail] = useState('');
@@ -40,6 +41,10 @@ const LoginForm = ({ onLogin }) => {
     return isValid;
   };
 
+  const hashPassword = (password) => {
+    return CryptoJS.SHA256(password).toString();
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -48,7 +53,6 @@ const LoginForm = ({ onLogin }) => {
     setIsLoading(true);
 
     try {
-      // Sign in with Supabase
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -60,7 +64,6 @@ const LoginForm = ({ onLogin }) => {
         return;
       }
 
-      // Fetch the custom user ID from the users table
       const { data: userData, error: fetchError } = await supabase
         .from('users')
         .select('id, remember_me')
@@ -73,19 +76,17 @@ const LoginForm = ({ onLogin }) => {
         return;
       }
 
-      // Update remember_me if checked
       if (remember) {
         const { error: updateError } = await supabase
           .from('users')
-          .update({ remember_me: true })
+          .update({ remember_me: true, password: hashPassword(password) })
           .eq('email', data.user.email);
 
         if (updateError) {
-          console.error('Error updating remember_me:', updateError);
+          console.error('Error updating user data:', updateError);
         }
       }
 
-      // Call onLogin with custom ID and email
       onLogin(userData.id, email, password, remember);
     } catch (error) {
       console.error('Login error:', error);
@@ -212,42 +213,6 @@ const LoginForm = ({ onLogin }) => {
             Sign in
           </Button>
         </div>
-
-        <div className="mt-8">
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300" />
-            </div>
-            <div className="relative flex justify-center text-base">
-              <span className="bg-gradient-to-br from-violet-50 to-purple-50 px-4 text-gray-500">
-                Or continue with
-              </span>
-            </div>
-          </div>
-
-          <div className="mt-6">
-            <Button
-              type="button"
-              variant="outline"
-              fullWidth
-              leftIcon={<Twitter size={20} />}
-              className="h-14 text-lg"
-              onClick={async () => {
-                const { error } = await supabase.auth.signInWithOAuth({
-                  provider: 'twitter',
-                  options: {
-                    redirectTo: window.location.origin,
-                  },
-                });
-                if (error) {
-                  setErrors({ general: error.message });
-                }
-              }}
-            >
-              Continue with Twitter
-            </Button>
-          </div>
-        </div>
       </form>
 
       <p className="mt-4 text-center text-base text-gray-600">
@@ -258,17 +223,31 @@ const LoginForm = ({ onLogin }) => {
           onClick={async (e) => {
             e.preventDefault();
             if (!validateForm()) return;
-            const { data, error } = await supabase.auth.signUp({
-              email,
-              password,
-              options: {
-                emailRedirectTo: window.location.origin,
-              },
-            });
-            if (error) {
-              setErrors({ general: error.message });
-            } else {
-              alert('Sign-up email sent! Please check your inbox.');
+            try {
+              const { data, error } = await supabase.auth.signUp({
+                email,
+                password,
+                options: {
+                  emailRedirectTo: window.location.origin,
+                },
+              });
+              if (error) {
+                setErrors({ general: error.message });
+              } else {
+                const { error: updateError } = await supabase
+                  .from('users')
+                  .update({ password: hashPassword(password) })
+                  .eq('email', email);
+                if (updateError) {
+                  console.error('Error storing password:', updateError);
+                  setErrors({ general: 'Error storing user data' });
+                } else {
+                  alert('Sign-up email sent! Please check your inbox.');
+                }
+              }
+            } catch (error) {
+              console.error('Sign-up error:', error);
+              setErrors({ general: 'An unexpected error occurred' });
             }
           }}
         >
