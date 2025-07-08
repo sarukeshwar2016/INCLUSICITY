@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import Input from './ui/Input.jsx';
 import Button from './ui/Button.jsx';
-import { Eye, EyeOff, Mail, Lock, Github, Twitter } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, Twitter } from 'lucide-react';
 
 const LoginForm = ({ onLogin }) => {
   const [email, setEmail] = useState('');
@@ -41,11 +41,11 @@ const LoginForm = ({ onLogin }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!validateForm()) return;
-    
+
     setIsLoading(true);
-    
+
     try {
       await new Promise(resolve => setTimeout(resolve, 1000));
       onLogin(email, password, remember);
@@ -152,20 +152,13 @@ const LoginForm = ({ onLogin }) => {
               <div className="w-full border-t border-gray-300" />
             </div>
             <div className="relative flex justify-center text-base">
-              <span className="bg-gradient-to-br from-violet-50 to-purple-50 px-4 text-gray-500">Or continue with</span>
+              <span className="bg-gradient-to-br from-violet-50 to-purple-50 px-4 text-gray-500">
+                Or continue with
+              </span>
             </div>
           </div>
 
-          <div className="mt-6 grid grid-cols-2 gap-4">
-            <Button
-              type="button"
-              variant="outline"
-              fullWidth
-              leftIcon={<Github size={20} />}
-              className="h-14 text-lg"
-            >
-              GitHub
-            </Button>
+          <div className="mt-6">
             <Button
               type="button"
               variant="outline"
@@ -173,7 +166,7 @@ const LoginForm = ({ onLogin }) => {
               leftIcon={<Twitter size={20} />}
               className="h-14 text-lg"
             >
-              Twitter
+              Continue with Twitter
             </Button>
           </div>
         </div>
