@@ -4,9 +4,9 @@ import LoginForm from './LoginForm.jsx';
 import { MapPin, Navigation, Compass, Accessibility, Map } from 'lucide-react';
 
 const LoginPage = () => {
-  const handleLogin = (email, password, remember) => {
-    console.log('Login attempt:', { email, password, remember });
-    alert('Login successful! (This is just a demo)');
+  const handleLogin = (customId, email, password, remember) => {
+    console.log('Login attempt:', { customId, email, password, remember });
+    alert(`Login successful! User ID: ${customId} (This is just a demo)`);
   };
 
   return (

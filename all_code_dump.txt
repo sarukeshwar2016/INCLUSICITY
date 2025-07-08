@@ -1,3 +1,54 @@
+
+
+--- FILE: .\dump_all_files.py ---
+import os
+
+# File where the full dump will be stored
+DUMP_FILE = "all_code_dump.txt"
+
+# Extensions to include (edit based on your tech stack)
+INCLUDE_EXTENSIONS = {".js", ".jsx", ".ts", ".tsx", ".py", ".html", ".css", ".json"}
+
+# Folders to exclude from dumping
+EXCLUDE_DIRS = {"node_modules", ".git", "dist", "build", ".venv", "__pycache__", "dump_all_files.py"}
+
+def should_skip_dir(path):
+    return any(skip in path.split(os.sep) for skip in EXCLUDE_DIRS)
+
+def collect_code_lines(base_path="."):
+    all_lines = []
+
+    for root, _, files in os.walk(base_path):
+        if should_skip_dir(root):
+            continue
+
+        for file in files:
+            ext = os.path.splitext(file)[1]
+            if ext.lower() in INCLUDE_EXTENSIONS:
+                filepath = os.path.join(root, file)
+
+                try:
+                    with open(filepath, "r", encoding="utf-8") as f:
+                        content = f.readlines()
+                except Exception as e:
+                    print(f" Skipping {filepath}: {e}")
+                    continue
+
+                all_lines.append(f"\n\n--- FILE: {filepath} ---\n")
+                all_lines.extend(content)
+
+    return all_lines
+
+def write_dump(lines):
+    with open(DUMP_FILE, "w", encoding="utf-8") as f:
+        f.writelines(lines)
+    print(f"All code lines dumped to: {DUMP_FILE}")
+
+if __name__ == "__main__":
+    code_lines = collect_code_lines()
+    write_dump(code_lines)
+
+
 --- FILE: .\eslint.config.js ---
 import js from '@eslint/js';
 import globals from 'globals';
@@ -64,6 +115,7 @@ export default tseslint.config(
         "autoprefixer": "^10.4.18",
         "postcss": "^8.4.35",
         "tailwindcss": "^3.4.1",
+        "typescript": "^5.8.3",
         "vite": "^5.4.2"
       }
     },
@@ -1293,9 +1345,9 @@ export default tseslint.config(
       }
     },
     "node_modules/caniuse-lite": {
-      "version": "1.0.30001667",
-      "resolved": "https://registry.npmjs.org/caniuse-lite/-/caniuse-lite-1.0.30001667.tgz",
-      "integrity": "sha512-7LTwJjcRkzKFmtqGsibMeuXmvFDfZq/nzIjnmgCGzKKRVzjD72selLDK1oPF/Oxzmt4fNcPvTDvGqSDG4tCALw==",
+      "version": "1.0.30001727",
+      "resolved": "https://registry.npmjs.org/caniuse-lite/-/caniuse-lite-1.0.30001727.tgz",
+      "integrity": "sha512-pB68nIHmbN6L/4C6MH1DokyR3bYqFwjaSs/sWDHGj4CTcFtQUQMuJftVwWkXq7mNWOybD3KhUv3oWHoGxgP14Q==",
       "dev": true,
       "funding": [
         {
@@ -2656,6 +2708,19 @@ export default tseslint.config(
       "integrity": "sha512-Y/arvbn+rrz3JCKl9C4kVNfTfSm2/mEp5FSz5EsZSANGPSlQrpRI5M4PKF+mJnE52jOO90PnPSc3Ur3bTQw0gA==",
       "dev": true
     },
+    "node_modules/typescript": {
+      "version": "5.8.3",
+      "resolved": "https://registry.npmjs.org/typescript/-/typescript-5.8.3.tgz",
+      "integrity": "sha512-p1diW6TqL9L07nNxvRMM7hMMw4c5XOo/1ibL4aAIGmSAt9slTE1Xgw5KWuof2uTOvCg9BY7ZRi+GaF+7sfgPeQ==",
+      "dev": true,
+      "bin": {
+        "tsc": "bin/tsc",
+        "tsserver": "bin/tsserver"
+      },
+      "engines": {
+        "node": ">=14.17"
+      }
+    },
     "node_modules/update-browserslist-db": {
       "version": "1.1.1",
       "resolved": "https://registry.npmjs.org/update-browserslist-db/-/update-browserslist-db-1.1.1.tgz",
@@ -2931,9 +2996,11 @@ export default tseslint.config(
     "autoprefixer": "^10.4.18",
     "postcss": "^8.4.35",
     "tailwindcss": "^3.4.1",
+    "typescript": "^5.8.3",
     "vite": "^5.4.2"
   }
 }
+
 
 --- FILE: .\postcss.config.js ---
 export default {
@@ -2968,6 +3035,7 @@ export default {
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
     "isolatedModules": true,
+    "allowJs": true,
     "moduleDetection": "force",
     "noEmit": true,
     "jsx": "react-jsx",
@@ -3249,7 +3317,7 @@ createRoot(document.getElementById('root')).render(
 import React, { useState } from 'react';
 import Input from './ui/Input.jsx';
 import Button from './ui/Button.jsx';
-import { Eye, EyeOff, Mail, Lock, Github, Twitter } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, Twitter } from 'lucide-react';
 
 const LoginForm = ({ onLogin }) => {
   const [email, setEmail] = useState('');
@@ -3289,11 +3357,11 @@ const LoginForm = ({ onLogin }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!validateForm()) return;
-    
+
     setIsLoading(true);
-    
+
     try {
       await new Promise(resolve => setTimeout(resolve, 1000));
       onLogin(email, password, remember);
@@ -3400,20 +3468,13 @@ const LoginForm = ({ onLogin }) => {
               <div className="w-full border-t border-gray-300" />
             </div>
             <div className="relative flex justify-center text-base">
-              <span className="bg-gradient-to-br from-violet-50 to-purple-50 px-4 text-gray-500">Or continue with</span>
+              <span className="bg-gradient-to-br from-violet-50 to-purple-50 px-4 text-gray-500">
+                Or continue with
+              </span>
             </div>
           </div>
 
-          <div className="mt-6 grid grid-cols-2 gap-4">
-            <Button
-              type="button"
-              variant="outline"
-              fullWidth
-              leftIcon={<Github size={20} />}
-              className="h-14 text-lg"
-            >
-              GitHub
-            </Button>
+          <div className="mt-6">
             <Button
               type="button"
               variant="outline"
@@ -3421,7 +3482,7 @@ const LoginForm = ({ onLogin }) => {
               leftIcon={<Twitter size={20} />}
               className="h-14 text-lg"
             >
-              Twitter
+              Continue with Twitter
             </Button>
           </div>
         </div>
@@ -3438,6 +3499,7 @@ const LoginForm = ({ onLogin }) => {
 };
 
 export default LoginForm;
+
 
 --- FILE: .\src\components\LoginPage.jsx ---
 import React from 'react';

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Input from './ui/Input.jsx';
 import Button from './ui/Button.jsx';
 import { Eye, EyeOff, Mail, Lock, Twitter } from 'lucide-react';
+import { supabase } from '../supabaseClient';
 
 const LoginForm = ({ onLogin }) => {
   const [email, setEmail] = useState('');
@@ -47,10 +48,48 @@ const LoginForm = ({ onLogin }) => {
     setIsLoading(true);
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      onLogin(email, password, remember);
+      // Sign in with Supabase
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        setErrors({ general: error.message });
+        setIsLoading(false);
+        return;
+      }
+
+      // Fetch the custom user ID from the users table
+      const { data: userData, error: fetchError } = await supabase
+        .from('users')
+        .select('id, remember_me')
+        .eq('email', data.user.email)
+        .single();
+
+      if (fetchError || !userData) {
+        setErrors({ general: 'Error fetching user data' });
+        setIsLoading(false);
+        return;
+      }
+
+      // Update remember_me if checked
+      if (remember) {
+        const { error: updateError } = await supabase
+          .from('users')
+          .update({ remember_me: true })
+          .eq('email', data.user.email);
+
+        if (updateError) {
+          console.error('Error updating remember_me:', updateError);
+        }
+      }
+
+      // Call onLogin with custom ID and email
+      onLogin(userData.id, email, password, remember);
     } catch (error) {
       console.error('Login error:', error);
+      setErrors({ general: 'An unexpected error occurred' });
     } finally {
       setIsLoading(false);
     }
@@ -66,6 +105,10 @@ const LoginForm = ({ onLogin }) => {
           Sign in to access your accessible city navigation
         </p>
       </div>
+
+      {errors.general && (
+        <p className="text-base text-red-500 text-center">{errors.general}</p>
+      )}
 
       <form className="mt-10 space-y-8" onSubmit={handleSubmit}>
         <div className="space-y-6">
@@ -95,8 +138,8 @@ const LoginForm = ({ onLogin }) => {
             fullWidth
             leftIcon={<Lock size={20} />}
             rightIcon={
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={togglePasswordVisibility}
                 className="text-gray-500 hover:text-gray-700 focus:outline-none"
               >
@@ -121,13 +164,37 @@ const LoginForm = ({ onLogin }) => {
               checked={remember}
               onChange={(e) => setRemember(e.target.checked)}
             />
-            <label htmlFor="remember-me" className="ml-3 block text-base text-gray-700">
+            <label
+              htmlFor="remember-me"
+              className="ml-3 block text-base text-gray-700"
+            >
               Remember me
             </label>
           </div>
 
           <div className="text-base">
-            <a href="#" className="font-medium text-violet-600 hover:text-violet-500">
+            <a
+              href="#"
+              className="font-medium text-violet-600 hover:text-violet-500"
+              onClick={async (e) => {
+                e.preventDefault();
+                if (email) {
+                  const { error } = await supabase.auth.resetPasswordForEmail(
+                    email,
+                    {
+                      redirectTo: window.location.origin + '/reset-password',
+                    }
+                  );
+                  if (error) {
+                    setErrors({ general: error.message });
+                  } else {
+                    alert('Password reset email sent!');
+                  }
+                } else {
+                  setErrors({ email: 'Please enter your email first' });
+                }
+              }}
+            >
               Forgot your password?
             </a>
           </div>
@@ -165,6 +232,17 @@ const LoginForm = ({ onLogin }) => {
               fullWidth
               leftIcon={<Twitter size={20} />}
               className="h-14 text-lg"
+              onClick={async () => {
+                const { error } = await supabase.auth.signInWithOAuth({
+                  provider: 'twitter',
+                  options: {
+                    redirectTo: window.location.origin,
+                  },
+                });
+                if (error) {
+                  setErrors({ general: error.message });
+                }
+              }}
             >
               Continue with Twitter
             </Button>
@@ -174,7 +252,26 @@ const LoginForm = ({ onLogin }) => {
 
       <p className="mt-4 text-center text-base text-gray-600">
         Don't have an account?{' '}
-        <a href="#" className="font-medium text-violet-600 hover:text-violet-500">
+        <a
+          href="#"
+          className="font-medium text-violet-600 hover:text-violet-500"
+          onClick={async (e) => {
+            e.preventDefault();
+            if (!validateForm()) return;
+            const { data, error } = await supabase.auth.signUp({
+              email,
+              password,
+              options: {
+                emailRedirectTo: window.location.origin,
+              },
+            });
+            if (error) {
+              setErrors({ general: error.message });
+            } else {
+              alert('Sign-up email sent! Please check your inbox.');
+            }
+          }}
+        >
           Sign up for free
         </a>
       </p>
