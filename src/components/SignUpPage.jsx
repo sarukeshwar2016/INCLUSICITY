@@ -1,6 +1,6 @@
 import React from 'react';
 import Logo from './Logo.jsx';
-import SignUpForm from './SignUpForm.jsx';
+import SignUpForm from './SignupForm.jsx';
 import { MapPin, Navigation, Compass, Accessibility, Map } from 'lucide-react';
 
 const SignUpPage = () => {

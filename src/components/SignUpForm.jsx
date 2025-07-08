@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Input from './ui/Input.jsx';
 import Button from './ui/Button.jsx';
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
@@ -11,6 +12,7 @@ const SignUpForm = ({ onSignUp }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
+  const navigate = useNavigate();
 
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
@@ -20,15 +22,15 @@ const SignUpForm = ({ onSignUp }) => {
     const newErrors = {};
     let isValid = true;
 
-    if (!email) {
+    if (!email.trim()) { // Updated to trim whitespace
       newErrors.email = 'Email is required';
       isValid = false;
-    } else if (!/\S+@\S+\.\S+/.test(email)) {
+    } else if (!/\S+@\S+\.\S+/.test(email.trim())) {
       newErrors.email = 'Email is invalid';
       isValid = false;
     }
 
-    if (!password) {
+    if (!password.trim()) { // Updated to trim whitespace
       newErrors.password = 'Password is required';
       isValid = false;
     } else if (password.length < 6) {
@@ -47,14 +49,20 @@ const SignUpForm = ({ onSignUp }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!validateForm()) return;
+    // Validate form before proceeding
+    if (!validateForm()) {
+      setIsLoading(false); // Ensure loading is reset
+      return;
+    }
 
     setIsLoading(true);
+    setErrors({}); // Clear previous errors
 
     try {
+      // Sign up with Supabase
       const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
+        email: email.trim(), // Trim email
+        password: password.trim(), // Trim password
         options: {
           emailRedirectTo: window.location.origin,
         },
@@ -66,10 +74,14 @@ const SignUpForm = ({ onSignUp }) => {
         return;
       }
 
+      // Wait briefly to ensure the trigger has created the user record
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      // Update the users table with the hashed password
       const { error: updateError } = await supabase
         .from('users')
-        .update({ password: hashPassword(password) })
-        .eq('email', email);
+        .update({ password: hashPassword(password.trim()) })
+        .eq('email', email.trim());
 
       if (updateError) {
         console.error('Error storing password:', updateError);
@@ -78,28 +90,27 @@ const SignUpForm = ({ onSignUp }) => {
         return;
       }
 
-      if (data.user) {
-        const { data: userData, error: fetchError } = await supabase
-          .from('users')
-          .select('id')
-          .eq('email', data.user.email)
-          .single();
+      // Fetch the custom user ID
+      const { data: userData, error: fetchError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('email', email.trim())
+        .single();
 
-        if (fetchError || !userData) {
-          setErrors({ general: 'Error fetching user data' });
-          setIsLoading(false);
-          return;
-        }
-
-        onSignUp(userData.id, email);
-        alert('Sign-up email sent! Please check your inbox.');
-      } else {
-        setErrors({ general: 'Sign-up successful, but no user data returned' });
+      if (fetchError || !userData) {
+        console.error('Error fetching user data:', fetchError);
+        setErrors({ general: 'Error fetching user data. Please try signing up again.' });
+        setIsLoading(false);
+        return;
       }
+
+      // Call onSignUp and redirect to login page
+      onSignUp(userData.id, email.trim());
+      alert('Sign-up email sent! Please check your inbox.');
+      navigate('/'); // Redirect to login page
     } catch (error) {
       console.error('Sign-up error:', error);
-      setErrors({ general: 'An unexpected error occurred' });
-    } finally {
+      setErrors({ general: 'An unexpected error occurred. Please try again.' });
       setIsLoading(false);
     }
   };
