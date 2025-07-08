@@ -6,10 +6,19 @@ DUMP_FILE = "all_code_dump.txt"
 # Extensions to include (edit based on your tech stack)
 INCLUDE_EXTENSIONS = {".js", ".jsx", ".ts", ".tsx", ".py", ".html", ".css", ".json"}
 
+# Folders to exclude from dumping
+EXCLUDE_DIRS = {"node_modules", ".git", "dist", "build", ".venv", "__pycache__", "dump_all_files.py"}
+
+def should_skip_dir(path):
+    return any(skip in path.split(os.sep) for skip in EXCLUDE_DIRS)
+
 def collect_code_lines(base_path="."):
     all_lines = []
 
     for root, _, files in os.walk(base_path):
+        if should_skip_dir(root):
+            continue
+
         for file in files:
             ext = os.path.splitext(file)[1]
             if ext.lower() in INCLUDE_EXTENSIONS:
